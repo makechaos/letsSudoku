@@ -19,6 +19,9 @@
 .bnd{
   border: 2px solid black;
 }
+.hlight {
+    background-color: #CCCCFFFF;
+}
 .original {
   color: blue;
   font-weight: bold;
@@ -49,9 +52,11 @@ var inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
 then all 10 entries would be present in order. This implies more storage but helps
 to update in a fast manner.
 */
-function update(bid, tmp=-1) {
+function update(bid, tmp=-1, hlight=0) {
   var el = document.getElementById(bid);
-  el.setAttribute("class", "entry "+inputType);
+  var htxt = ''
+  if(hlight) htxt = ' hlight';
+  el.setAttribute("class", "entry "+inputType+htxt);
   if(inputType=="original") el.setAttribute("disabled",true);
   inputs['date'] = selDate;
   if(tmp==-1)  {
@@ -83,29 +88,44 @@ function getPoll() {
         if (this.readyState == 4 && this.status == 200) {
            // document.getElementById("demo").innerHTML = xhttp.responseText;
            resp = xhttp.responseText;
-           if(resp.length>10) fill(JSON.parse(resp));
+           if(resp.length>15) {
+               fill(JSON.parse(resp));
+           }
         }
     };
     xhttp.open("GET", "poll/"+selDate, true);
     xhttp.send();
     document.getElementById("pollCount").innerHTML = ''+pollCount;
 }
+var newEntries = [];
+function removeHighlight() {
+    for(var n=0; n<newEntries.length; n++) {
+        var el = document.getElementById(newEntries[n]);
+        var cs = el.getAttribute('class');
+        el.setAttribute('class', cs.replace('hlight',''));
+    }
+}
 function fill(jsoninp) {
     // update only the newest edits only (cell entries can be repeated)
+  newEntries = [];
   var N1 = inputs['original'].length;
   var N2 = inputs['normal'].length;
+  console.info(''+N1+','+jsoninp['original'].length+';'+N2+','+jsoninp['normal'].length+';');
   // inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
     e = 'normal';
     inputType = e;
-    for(var n=N1; n<jsoninp[e].length; n++) {
-      update(jsoninp[e][n][0],jsoninp[e][n][1]);
+    for(var n=N2; n<jsoninp[e].length; n++) {
+      newEntries.push(jsoninp[e][n][0]);
+      update(jsoninp[e][n][0],jsoninp[e][n][1],1);
     }
     e = 'original';
     inputType = e;
     for(var n=N1; n<jsoninp[e].length; n++) {
-      update(jsoninp[e][n][0],jsoninp[e][n][1]);
+      newEntries.push(jsoninp[e][n][0]);
+      update(jsoninp[e][n][0],jsoninp[e][n][1],1);
     }
   setInput();
+  window.setTimeout(removeHighlight, 500);
 }
 function setDate() {
     selDate = document.getElementById("date").value;
@@ -147,10 +167,12 @@ function init() {
   myInterval = window.setInterval(getPoll, refreshRate*1000);
     //clearInterval(myInterval);
 }
-var refreshRate = 1;
+var refreshRate = 5;
 function updateRefresh() {
-    refreshRate = document.getElementById("refresh").value;
+    refreshRate = parseInt(document.getElementById("refresh").value);
     if(refreshRate<1) refreshRate = 1;
+    clearInterval(myInterval);
+    myInterval = window.setInterval(getPoll, refreshRate*1000);
 }
 </script>
 </head>
@@ -159,13 +181,12 @@ function updateRefresh() {
 <select id="inputType" style="margin:3px;padding:3px;" onchange="setInput()">
 <option value="normal">Normal Fill</option>
 <option value="original">Initial Set</option>
-<option value="suggest">Suggest</option>
 </select>
 <select id="date" style="margin:3px;padding:3px;" onchange="setDate()">
 <option value="today">Today</option>
 {{dateOptions}}
 </select>
 <div id="grid" class="grid"></div>
-<input id="refresh" value=1 type="number" style="width:100px;" onchange="updateRefresh()" /><div id="pollCount"></div>
+<input id="refresh" value=5 type="number" style="width:100px;" onchange="updateRefresh()" /><div id="pollCount"></div>
 </body>
 </html>

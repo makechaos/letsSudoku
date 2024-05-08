@@ -28,24 +28,31 @@ def update(jsonStr):
     jsonData = json.loads(jsonStr)
     curDate = jsonData['date']
 
-    if curDate=='today':
-        curDate = datetime.datetime.now().strftime('%Y-%m-%d')
+    curDate = getDate(curDate)
+    # if curDate=='today':
+    #     curDate = datetime.datetime.now().strftime('%Y-%m-%d')
 
     dateTimeEnts[curDate] = jsonStr
     json.dump(dateTimeEnts, open(sudokuDir+'sudoku.json','w'), indent=2)
     return dateTimeEnts[curDate]
 
+def getDate(curDate):
+    if curDate=="today":
+        curDate = datetime.datetime.now().strftime('%Y-%m-%d')
+    return curDate
+
 def clear(dt):
     global dateTimeEnts
+    dt = getDate(dt)
     dateTimeEnts[dt] = ""
+    json.dump(dateTimeEnts, open(sudokuDir+'sudoku.json','w'), indent=2)
+    return "cl-"+dt
 
 def poll(curDate):
     global dateTimeEnts
 
     loadDateEnts()
-    if curDate=="today":
-        curDate = datetime.datetime.now().strftime('%Y-%m-%d')
-
+    curDate = getDate(curDate)
     if curDate in dateTimeEnts:
         return dateTimeEnts[curDate]
     else:
