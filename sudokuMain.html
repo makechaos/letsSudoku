@@ -1,0 +1,161 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<style>
+.grid {
+}
+.header {
+  width: 100%;
+  background-color: #AAAAFFFF;
+}
+.entry {
+  width: 30px;
+  height: 30px;
+  margin: 2px;
+  padding: 2px;
+  font-size: 20;
+  text-align: center;
+}
+.bnd{
+  border: 2px solid black;
+}
+.original {
+  color: blue;
+  font-weight: bold;
+}
+.suggest {
+  color: gray;
+}
+.normal {
+  color: black;
+}
+
+
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+</style>
+<script>
+var selDate = 'today';
+var hostip = "{{hostip}}";
+var inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
+function update(bid, tmp=-1) {
+  var el = document.getElementById(bid);
+  el.setAttribute("class", "entry "+inputType);
+  if(inputType=="original") el.setAttribute("disabled",true);
+  inputs['date'] = selDate;
+  if(tmp==-1)  {
+      inputs[inputType].push([bid,el.value]);
+      sendUpdate();
+  } else {
+      inputs[inputType].push([bid,tmp]);
+      el.value = tmp;
+  }
+}
+var myInterval;
+var pollCount=0;
+function sendUpdate() {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+           // document.getElementById("demo").innerHTML = xhttp.responseText;
+           // alert(xhttp.responseText);
+        }
+    };
+    xhttp.open("GET", "update/"+JSON.stringify(inputs), true);
+    xhttp.send();
+}
+var resp;
+function getPoll() {
+    pollCount += 1;
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+           // document.getElementById("demo").innerHTML = xhttp.responseText;
+           resp = xhttp.responseText;
+           if(resp.length>10) fill(JSON.parse(resp));
+        }
+    };
+    xhttp.open("GET", "poll/"+selDate, true);
+    xhttp.send();
+    document.getElementById("pollCount").innerHTML = ''+pollCount;
+}
+function fill(jsoninp) {
+  var N1 = inputs['original'].length;
+  var N2 = inputs['normal'].length;
+  // inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
+    e = 'normal';
+    inputType = e;
+    for(var n=N1; n<jsoninp[e].length; n++) {
+      update(jsoninp[e][n][0],jsoninp[e][n][1]);
+    }
+    e = 'original';
+    inputType = e;
+    for(var n=N1; n<jsoninp[e].length; n++) {
+      update(jsoninp[e][n][0],jsoninp[e][n][1]);
+    }
+  setInput();
+}
+function setDate() {
+    selDate = document.getElementById("date").value;
+    inputs['date'] = selDate;
+    clearInterval(myInterval);
+    init();
+}
+var inputType = "normal";
+function setInput() {
+  inputType = document.getElementById("inputType").value;
+}
+function init() {
+  var el = document.getElementById("grid");
+  var gel = '<table>';
+  for(var nn=0;nn<3;nn++) {
+    gel += '<tr>';
+    for(var mm=0;mm<3;mm++) {
+      gel += '<td class="rightBnd bnd">';
+      var tid = ''+nn+''+mm;
+      var cel = '<table>';
+      for(var n=0; n<3; n++) {
+        cel += '<tr>';
+        for(var m=0; m<3; m++) {
+          var bid = ''+tid+''+n+''+m;
+          cel += '<td><input type="number" class="entry" id="'+bid+'" onchange="update('+"'"+bid+"'"+')"/></td>'
+        }
+        cel += '</tr>'
+      }
+      cel += '</table>';
+      gel += cel;
+      gel += '<td>';
+    }
+    gel += '</tr>';
+  }
+  gel += '</table>'
+  el.innerHTML = gel;
+  getPoll();
+  myInterval = window.setInterval(getPoll, 2000);
+    //clearInterval(myInterval);
+}
+
+</script>
+</head>
+<body onload="init()">
+<div id="header" class="header"><h1>Lets Sudoku</h1> </div>
+<select id="inputType" style="margin:3px;padding:3px;" onchange="setInput()">
+<option value="normal">Normal Fill</option>
+<option value="original">Initial Set</option>
+<option value="suggest">Suggest</option>
+</select>
+<select id="date" style="margin:3px;padding:3px;" onchange="setDate()">
+<option value="today">Today</option>
+{{dateOptions}}
+</select>
+<div id="grid" class="grid"></div>
+<div id="pollCount"></div>
+</body>
+</html>
