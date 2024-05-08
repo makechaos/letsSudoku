@@ -138,10 +138,15 @@ function init() {
   gel += '</table>'
   el.innerHTML = gel;
   getPoll();
-  myInterval = window.setInterval(getPoll, 2000);
+  updateRefresh();
+  myInterval = window.setInterval(getPoll, refreshRate*1000);
     //clearInterval(myInterval);
 }
-
+var refreshRate = 1;
+function updateRefresh() {
+    refreshRate = document.getElementById("refresh").value;
+    if(refreshRate<1) refreshRate = 1;
+}
 </script>
 </head>
 <body onload="init()">
@@ -156,6 +161,6 @@ function init() {
 {{dateOptions}}
 </select>
 <div id="grid" class="grid"></div>
-<div id="pollCount"></div>
+<input id="refresh" value=1 type="number" style="width:100px;" onchange="updateRefresh()" /><div id="pollCount"></div>
 </body>
 </html>
