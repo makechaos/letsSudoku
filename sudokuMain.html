@@ -45,6 +45,10 @@ input[type=number] {
 var selDate = 'today';
 var hostip = "{{hostip}}";
 var inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
+/* Architecture: all changes are noted in order i.e. if a cell is edited 10 times
+then all 10 entries would be present in order. This implies more storage but helps
+to update in a fast manner.
+*/
 function update(bid, tmp=-1) {
   var el = document.getElementById(bid);
   el.setAttribute("class", "entry "+inputType);
@@ -87,6 +91,7 @@ function getPoll() {
     document.getElementById("pollCount").innerHTML = ''+pollCount;
 }
 function fill(jsoninp) {
+    // update only the newest edits only (cell entries can be repeated)
   var N1 = inputs['original'].length;
   var N2 = inputs['normal'].length;
   // inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
