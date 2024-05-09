@@ -1,5 +1,6 @@
 <html>
 <head>
+<title>Lets Sudoku (collaborative play)</title>
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <style>
 .grid {
@@ -67,7 +68,6 @@ function update(bid, tmp=-1, hlight=0) {
       el.value = tmp;
   }
 }
-var myInterval;
 var pollCount=0;
 function sendUpdate() {
     var xhttp = new XMLHttpRequest();
@@ -99,36 +99,50 @@ function getPoll() {
 }
 var newEntries = [];
 function removeHighlight() {
+    // console.info('removeHighlight:'+newEntries.length+','+newEntries);
     for(var n=0; n<newEntries.length; n++) {
         var el = document.getElementById(newEntries[n]);
         var cs = el.getAttribute('class');
         el.setAttribute('class', cs.replace('hlight',''));
     }
+    newEntries = [];
 }
 function fill(jsoninp) {
     // update only the newest edits only (cell entries can be repeated)
-  newEntries = [];
   var N1 = inputs['original'].length;
   var N2 = inputs['normal'].length;
-  console.info(''+N1+','+jsoninp['original'].length+';'+N2+','+jsoninp['normal'].length+';');
+  // console.info(''+N1+','+jsoninp['original'].length+';'+N2+','+jsoninp['normal'].length+';');
   // inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
     e = 'normal';
     inputType = e;
+    var first = true;
     for(var n=N2; n<jsoninp[e].length; n++) {
+      if(first) { newEntries=[]; first=false; }
       newEntries.push(jsoninp[e][n][0]);
       update(jsoninp[e][n][0],jsoninp[e][n][1],1);
     }
     e = 'original';
     inputType = e;
     for(var n=N1; n<jsoninp[e].length; n++) {
+      if(first) { newEntries=[]; first=false; }
       newEntries.push(jsoninp[e][n][0]);
       update(jsoninp[e][n][0],jsoninp[e][n][1],1);
     }
   setInput();
-  window.setTimeout(removeHighlight, 500);
+  // console.info('fill:'+newEntries);
+  if(newEntries.length>0)  window.setTimeout(removeHighlight, 500);
 }
 function setDate() {
     selDate = document.getElementById("date").value;
+    if(selDate=='custom') {
+        selDate = prompt('Enter custom name:');
+        var el = document.getElementById("date");
+        var cel = document.createElement('option');
+        cel.setAttribute('value',selDate);
+        cel.setAttribute('selected','');
+        cel.innerHTML = selDate;
+        el.appendChild(cel);
+    }
     inputs['date'] = selDate;
     clearInterval(myInterval);
     init();
@@ -164,15 +178,18 @@ function init() {
   el.innerHTML = gel;
   getPoll();
   updateRefresh();
+  setAutoUpdate();
+}
+var myInterval=0;
+function setAutoUpdate() {
+  if(myInterval!=0)  clearInterval(myInterval);
   myInterval = window.setInterval(getPoll, refreshRate*1000);
-    //clearInterval(myInterval);
 }
 var refreshRate = 5;
 function updateRefresh() {
     refreshRate = parseInt(document.getElementById("refresh").value);
     if(refreshRate<1) refreshRate = 1;
-    clearInterval(myInterval);
-    myInterval = window.setInterval(getPoll, refreshRate*1000);
+    setAutoUpdate();
 }
 </script>
 </head>
@@ -184,9 +201,10 @@ function updateRefresh() {
 </select>
 <select id="date" style="margin:3px;padding:3px;" onchange="setDate()">
 <option value="today">Today</option>
+<option value="custom">Custom</option>
 {{dateOptions}}
 </select>
 <div id="grid" class="grid"></div>
-<input id="refresh" value=5 type="number" style="width:100px;" onchange="updateRefresh()" /><div id="pollCount"></div>
+<input id="refresh" value=2 type="number" style="width:100px;" onchange="updateRefresh()" /><div id="pollCount"></div>
 </body>
 </html>
