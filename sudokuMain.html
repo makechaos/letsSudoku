@@ -5,6 +5,10 @@
 <style>
 .grid {
 }
+.button {
+    margin: 3px;
+    padding: 3px;
+}
 .header {
   width: 100%;
   background-color: #AAAAFFFF;
@@ -37,9 +41,12 @@
 .normal {
 
 }
+* {
+    font-family: arial;
+}
 .blinker {
     width: 50px;
-    color: #44FF44AA;
+    color: #222222AA;
     background-color: #00FF00AA;
     height: 17px;
     margin: 3px;
@@ -50,7 +57,7 @@
 }
 .light {
     background-color: #AAFFAAAA;
-    color: #AAFFAAAA;
+    color: #222222AA;
 }
 
 input::-webkit-inner-spin-button {
@@ -72,13 +79,59 @@ var inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
 then all 10 entries would be present in order. This implies more storage but helps
 to update in a fast manner.
 */
+function checkSudoku() {
+
+    var emptyCount = 0;
+    var invalidCount = 0;
+    var repeatCount = 0;
+    function getVal(mm,nn,m,n,chkr) {
+      var v=parseInt(document.getElementById(''+m+''+n+''+mm+''+nn).value);
+      if(isNaN(v)) { emptyCount+=1; return chkr; }
+      if((v<0)||(v>9)) { invalidCount+=1; return chkr;}
+      if(chkr.indexOf(v)>=0) { repeatCount+=1; return chkr; }
+      chkr.push(v);
+      return chkr;
+    }
+
+    var allCheckLog = [];
+    for(var m=0;m<3;m++) { for(var n=0;n<3;n++) {
+        var chkr=[];
+        for(var mm=0;mm<3;mm++) { for(var nn=0;nn<3;nn++) {
+            chkr = getVal(mm,nn,m,n,chkr); } }
+        if(chkr.length!=9) allCheckLog.push('Block:'+m+''+n+': not ok');
+    } }
+
+    for(var mm=0;mm<3;mm++) { for(var m=0;m<3;m++) {
+        var chks=[]; var chkr=[];
+        for(var n=0;n<3;n++) {for(var nn=0;nn<3;nn++) {
+            chkr = getVal(mm,nn,m,n,chkr); } }
+        if(chkr.length!=9) allCheckLog.push('Row:'+mm+''+m+': not ok');
+    /*console.info(chkr);*/} }
+
+    for(var nn=0;nn<3;nn++) { for(var n=0;n<3;n++) {
+        var chks=[]; var chkr=[];
+        for(var m=0;m<3;m++) {for(var mm=0;mm<3;mm++) {
+            chkr = getVal(mm,nn,m,n,chkr); } }
+        if(chkr.length!=9) allCheckLog.push('Col:'+nn+''+n+': not ok');
+    /*console.info(chks);*/} }
+
+    if(allCheckLog.length==0) allCheckLog = 'All GOOD !!';
+    allCheckLog = ''+allCheckLog;
+    if(emptyCount>0) allCheckLog = allCheckLog+', #empty:'+emptyCount;
+    if(repeatCount>0) allCheckLog = allCheckLog+', #repeat:'+repeatCount;
+    if(invalidCount>0) allCheckLog = allCheckLog+', #invalid:'+invalidCount;
+    document.getElementById("checkMsg").innerHTML = ''+allCheckLog;
+}
 function update(bid, tmp=-1, hlight=0, luser=0) {
+  // console.info(''+bid+','+tmp+','+hlight+','+luser);
   var el = document.getElementById(bid);
   var htxt = "";
   if(inputType=="original") {
       el.setAttribute("disabled",true);
   } else {
-      if(hlight) htxt = ' hlight hideEntry';
+      htxt = ' hlight';
+      // console.info(''+document.getElementById("block").checked==false+','+(luser!=0)+','+(luser!=user));
+      if(document.getElementById("block").checked==false && (luser!=0) && (luser!=user)) htxt = ' hlight hideEntry';
   }
   el.setAttribute("class", "entry "+inputType+" "+htxt);
   inputs['date'] = selDate;
@@ -118,7 +171,7 @@ function getPoll() {
     xhttp.open("GET", "poll/"+selDate, true);
     xhttp.send();
     var pel = document.getElementById("pollCount")
-    pel.innerHTML = ''+pollCount;
+    pel.innerHTML = ''+user;
     if(pollCount%2) pel.setAttribute("class", "blinker");
     else pel.setAttribute("class", "blinker light");
 }
@@ -152,7 +205,7 @@ function removeHighlight() {
 function updateFill(inp) {
     newEntries.push(inp[0]);
     if(inp.length==3) {
-        update(inp[0], inp[1], 1, inp[2]==user);
+        update(inp[0], inp[1], 1, inp[2]);
     }
     else update(inp[0], inp[1], 1, 0);
 }
@@ -198,8 +251,8 @@ var inputType = "normal";
 function setInput() {
   inputType = document.getElementById("inputType").value;
 }
-function init() {
-  user = prompt('Enter user name:');
+function init(isFirst=0) {
+  if(isFirst) user = prompt('Enter user name:');
   var el = document.getElementById("grid");
   var gel = '<table>';
   for(var nn=0;nn<3;nn++) {
@@ -224,6 +277,7 @@ function init() {
   }
   gel += '</table>'
   el.innerHTML = gel;
+  inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
   getPoll();
   updateRefresh();
   setAutoUpdate();
@@ -241,7 +295,7 @@ function updateRefresh() {
 }
 </script>
 </head>
-<body onload="init()">
+<body onload="init(1)">
 <div id="header" class="header"><h1>Lets Sudoku</h1> </div>
 <select id="inputType" style="margin:3px;padding:3px;" onchange="setInput()">
 <option value="normal">Normal Fill</option>
@@ -252,9 +306,11 @@ function updateRefresh() {
 <option value="custom">Custom</option>
 {{dateOptions}}
 </select>
-<button style="margin:2px;padding:2px;" onclick="removeBlocks()">Un-Block</button>
+<button style="margin:2px;padding:2px;"onclick="removeBlocks()">Un-Block</button>
+(always <input type="checkbox" checked=true id="block" style="margin:2px;padding:2px;"/>)
 <div id="grid" class="grid"></div>
 <div id="pollCount" class="blinker"></div>
-<input id="refresh" value=2 type="number" style="width:50px;margin:3px;padding:3px;" onchange="updateRefresh()" />
+<input id="refresh" value=1 type="number" style="width:50px;margin:3px;padding:3px;" onchange="updateRefresh()" />
+<button onclick="checkSudoku()">Check</button><div id="checkMsg"></div>
 </body>
 </html>
