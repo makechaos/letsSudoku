@@ -277,6 +277,7 @@ function init(isFirst=0) {
   }
   gel += '</table>'
   el.innerHTML = gel;
+  document.getElementById("checkMsg").innerHTML = "";
   inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
   getPoll();
   updateRefresh();
