@@ -74,7 +74,10 @@ input[type=number] {
 var user = "def";
 var selDate = 'today';
 var hostip = "{{hostip}}";
-var inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
+var inputs = [];
+var mapCode2Input = {'o': 'original', 'u': 'normal' };
+var mapInput2Code = {'original': 'o', 'normal': 'u' };
+var lastUpdatedIndx = 0;
 /* Architecture: all changes are noted in order i.e. if a cell is edited 10 times
 then all 10 entries would be present in order. This implies more storage but helps
 to update in a fast manner.
@@ -123,7 +126,7 @@ function checkSudoku() {
     document.getElementById("checkMsg").innerHTML = ''+allCheckLog;
 }
 function update(bid, tmp=-1, hlight=0, luser=0) {
-  // console.info(''+bid+','+tmp+','+hlight+','+luser);
+  /*console.info(''+bid+','+tmp+','+hlight+','+luser+'; '+inputType);*/
   var el = document.getElementById(bid);
   var htxt = "";
   if(inputType=="original") {
@@ -136,23 +139,23 @@ function update(bid, tmp=-1, hlight=0, luser=0) {
   el.setAttribute("class", "entry "+inputType+" "+htxt);
   inputs['date'] = selDate;
   if(tmp==-1)  {
-      inputs[inputType].push([bid,el.value,user]);
+      inputs.push([bid,el.value,user, mapInput2Code[inputType]]);
       sendUpdate();
   } else {
-      inputs[inputType].push([bid,tmp,luser]);
+      inputs.push([bid,tmp,luser, mapInput2Code[inputType]]);
       el.value = tmp;
   }
 }
 var pollCount=0;
 function sendUpdate() {
+    console.info(inputs);
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-           // document.getElementById("demo").innerHTML = xhttp.responseText;
-           // alert(xhttp.responseText);
+           lastUpdatedIndx = inputs.length;
         }
     };
-    xhttp.open("GET", "update/"+JSON.stringify(inputs), true);
+    xhttp.open("GET", "update/"+JSON.stringify({'date':selDate,'entries':inputs.slice(lastUpdatedIndx,inputs.length)}), true);
     xhttp.send();
 }
 var resp;
@@ -163,12 +166,14 @@ function getPoll() {
         if (this.readyState == 4 && this.status == 200) {
            // document.getElementById("demo").innerHTML = xhttp.responseText;
            resp = xhttp.responseText;
-           if(resp.length>15) {
-               fill(JSON.parse(resp));
+           if(resp.indexOf('[')>=0) {
+               fillv2(JSON.parse(resp));
+           } else {
+               console.info('got invalid resp:'+resp);
            }
         }
     };
-    xhttp.open("GET", "poll/"+selDate, true);
+    xhttp.open("GET", "poll/"+JSON.stringify({'date':selDate,'lastN':lastUpdatedIndx}), true);
     xhttp.send();
     var pel = document.getElementById("pollCount")
     pel.innerHTML = ''+user;
@@ -204,10 +209,24 @@ function removeHighlight() {
 }
 function updateFill(inp) {
     newEntries.push(inp[0]);
-    if(inp.length==3) {
+    if(inp.length>2) {
         update(inp[0], inp[1], 1, inp[2]);
     }
     else update(inp[0], inp[1], 1, 0);
+}
+function fillv2(jsoninp) {
+  // update only the newest edits only (cell entries can be repeated)
+  var first = true;
+  for(var n=0; n<jsoninp.length; n++) {
+      var inp = jsoninp[n];
+      inputType = mapCode2Input[inp[inp.length-1]];
+      if(first) { newEntries=[]; first=false; }
+      updateFill(inp);
+  }
+  lastUpdatedIndx = inputs.length;
+  setInput();
+  // console.info('fill:'+newEntries);
+  // if(newEntries.length>0)  window.setTimeout(removeHighlight, 500);
 }
 function fill(jsoninp) {
     // update only the newest edits only (cell entries can be repeated)
@@ -232,7 +251,7 @@ function fill(jsoninp) {
   // console.info('fill:'+newEntries);
   // if(newEntries.length>0)  window.setTimeout(removeHighlight, 500);
 }
-function setDate() {
+function setDate(callInit=1) {
     selDate = document.getElementById("date").value;
     if(selDate=='custom') {
         selDate = prompt('Enter custom name:');
@@ -245,7 +264,7 @@ function setDate() {
     }
     inputs['date'] = selDate;
     clearInterval(myInterval);
-    init();
+    if (callInit) init();
 }
 var inputType = "normal";
 function setInput() {
@@ -278,7 +297,8 @@ function init(isFirst=0) {
   gel += '</table>'
   el.innerHTML = gel;
   document.getElementById("checkMsg").innerHTML = "";
-  inputs = {'date':'', 'original':[], 'normal':[], 'suggest':[]};
+  inputs = [];
+  setDate(0);
   getPoll();
   updateRefresh();
   setAutoUpdate();
@@ -303,11 +323,11 @@ function updateRefresh() {
 <option value="original">Initial Set</option>
 </select>
 <select id="date" style="margin:3px;padding:3px;" onchange="setDate()">
-<option value="today">Today</option>
+<option value="today" selected>Today</option>
 <option value="custom">Custom</option>
 {{dateOptions}}
 </select>
-<button style="margin:2px;padding:2px;"onclick="removeBlocks()">Un-Block</button>
+<button style="margin:2px;padding:2px;" onclick="removeBlocks()">Un-Block</button>
 (always <input type="checkbox" checked=true id="block" style="margin:2px;padding:2px;"/>)
 <div id="grid" class="grid"></div>
 <div id="pollCount" class="blinker"></div>
